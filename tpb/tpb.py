@@ -10,6 +10,8 @@ Unofficial Python API for ThePirateBay.
 from __future__ import unicode_literals
 
 import datetime
+from urllib.request import urlopen, Request
+
 import dateutil.parser
 from functools import wraps
 from lxml import html
@@ -56,7 +58,9 @@ class List(object):
         Request URL and parse response. Yield a ``Torrent`` for every torrent
         on page.
         """
-        request = get(str(self.url), headers={'User-Agent' : "Magic Browser","origin_req_host" : "thepiratebay.se"})
+        user_agent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 5_0 like Mac OS X) AppleWebKit/534.46'
+        # request = urlopen(Request(str(self.url), data=None, headers={'User-Agent': user_agent}))
+        request = get(str(self.url), headers={'User-Agent': user_agent})
         root = html.fromstring(request.text)
         items = [self._build_torrent(row) for row in
                  self._get_torrent_rows(root)]
