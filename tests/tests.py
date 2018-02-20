@@ -212,7 +212,7 @@ class SearchTestCase(RemoteTestCase):
         for item in self.torrents:
             self.assertEqual(unicode, type(item.title))
             self.assertEqual(unicode, type(item.user))
-            self.assertTrue(hasattr(item, 'url'))
+            self.assertTrue(hasattr(item, 'torrent_url'))
             # ensure the URL points to the /torrent/ html page
             self.assertTrue(item.url.path().startswith('/torrent/'))
 

@@ -24,6 +24,8 @@ from .utils import URL
 
 from requests import get
 
+user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.167 Safari/537.36'
+
 if sys.version_info >= (3, 0):
     unicode = str
 
@@ -46,7 +48,7 @@ def self_if_parameters(func):
 class List(object):
 
     """
-    Abstract class for parsing a torrent list at some url and generate torrent
+    Abstract class for parsing a torrent list at some torrent_url and generate torrent
     objects to iterate over. Includes a resource path parser.
     """
 
@@ -58,9 +60,9 @@ class List(object):
         Request URL and parse response. Yield a ``Torrent`` for every torrent
         on page.
         """
-        user_agent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 5_0 like Mac OS X) AppleWebKit/534.46'
-        # request = urlopen(Request(str(self.url), data=None, headers={'User-Agent': user_agent}))
+        # request = urlopen(Request(str(self.torrent_url), data=None, headers={'User-Agent': user_agent}))
         request = get(str(self.url), headers={'User-Agent': user_agent})
+        # request = get(str(self.torrent_url))
         root = html.fromstring(request.text)
         items = [self._build_torrent(row) for row in
                  self._get_torrent_rows(root)]
@@ -97,11 +99,11 @@ class List(object):
         url = self.url.build().path(links[0].get('href'))
         magnet_link = links[1].get('href')  # the magnet download link
         try:
-            torrent_link = links[2].get('href')  # the torrent download link
-            if not torrent_link.endswith('.torrent'):
-                torrent_link = None
+            bitlord_link = links[2].get('href')  # the torrent bitlord link, if any
+            if not bitlord_link.find('bitlord'):
+                bitlord_link = None
         except IndexError:
-            torrent_link = None
+            bitlord_link = None
         comments = 0
         has_cover = 'No'
         images = cols[1].findall('.//img')
@@ -114,8 +116,10 @@ class List(object):
             if "cover" in image_title:
                 has_cover = 'Yes'
         user_status = "MEMBER"
-        if links[-2].get('href').startswith("/user/"):
+        user_link = None
+        if links[-1].get('href').startswith("/user/"):
             user_status = links[-2].find('.//img').get('title')
+            user_link = links[-1].get('href')
         meta_col = cols[1].find('.//font').text_content()  # don't need user
         match = self._meta.match(meta_col)
         created = match.groups()[0].replace('\xa0', ' ')
@@ -126,8 +130,8 @@ class List(object):
         seeders = int(cols[2].text)
         leechers = int(cols[3].text)
         t = Torrent(title, url, category, sub_category, magnet_link,
-                    torrent_link, comments, has_cover, user_status, created,
-                    size, user, seeders, leechers)
+                    bitlord_link, comments, has_cover, user_status, created,
+                    size, user, user_link, seeders, leechers)
         return t
 
 
@@ -322,22 +326,23 @@ class Torrent(object):
     Holder of a single TPB torrent.
     """
 
-    def __init__(self, title, url, category, sub_category, magnet_link,
-                 torrent_link, comments, has_cover, user_status, created,
-                 size, user, seeders, leechers):
+    def __init__(self, title, torrent_url, category, sub_category, magnet_link,
+                 bitlord_link, comments, has_cover, user_status, created,
+                 size, user, user_link, seeders, leechers):
         self.title = title  # the title of the torrent
-        self.url = url  # TPB url for the torrent
-        self.id = self.url.path_segments()[1]
+        self.torrent_url = torrent_url  # TPB torrent_url for the torrent
+        self.id = self.torrent_url.path_segments()[1]
         self.category = category  # the main category
         self.sub_category = sub_category  # the sub category
         self.magnet_link = magnet_link  # magnet download link
-        self.torrent_link = torrent_link  # .torrent download link
+        self.bitlord_link = bitlord_link  # .torrent download link
         self.comments = comments
         self.has_cover = has_cover
         self.user_status = user_status
         self._created = (created, time.time())  # uploaded date, current time
         self.size = size  # size of torrent
         self.user = user  # username of uploader
+        self.user_link = user_link  # uploader link
         self.seeders = seeders  # number of seeders
         self.leechers = leechers  # number of leechers
         self._info = None
@@ -346,7 +351,8 @@ class Torrent(object):
     @property
     def info(self):
         if self._info is None:
-            request = get(str(self.url), headers={'User-Agent' : "Magic Browser","origin_req_host" : "thepiratebay.se"})
+            request = get(str(self.torrent_url), headers={'User-Agent': user_agent})
+            # request = get(str(self.torrent_url))
             root = html.fromstring(request.text)
             info = root.cssselect('#details > .nfo > pre')[0].text_content()
             self._info = info
@@ -356,8 +362,9 @@ class Torrent(object):
     def files(self):
         if not self._files:
             path = '/ajax_details_filelist.php?id={id}'.format(id=self.id)
-            url = self.url.path(path)
-            request = get(str(url), headers={'User-Agent' : "Magic Browser","origin_req_host" : "thepiratebay.se"})
+            url = self.torrent_url.path(path)
+            request = get(str(url), headers={'User-Agent': user_agent})
+            # request = get(str(torrent_url))
             root = html.fromstring(request.text)
             rows = root.findall('.//tr')
             for row in rows:
@@ -396,11 +403,11 @@ class Torrent(object):
         Print the details of a torrent
         """
         print('Title: %s' % self.title)
-        print('URL: %s' % self.url)
+        print('URL: %s' % self.torrent_url)
         print('Category: %s' % self.category)
         print('Sub-Category: %s' % self.sub_category)
         print('Magnet Link: %s' % self.magnet_link)
-        print('Torrent Link: %s' % self.torrent_link)
+        print('Bitlord Link: %s' % self.bitlord_link)
         print('Uploaded: %s' % self.created)
         print('Comments: %d' % self.comments)
         print('Has Cover Image: %s' % self.has_cover)

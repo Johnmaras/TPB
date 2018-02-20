@@ -29,9 +29,9 @@ class RemoteTestCase(TestWithScenarios):
         cls.local = cls.server.url
         cls.scenarios = []
         if cls._do_local:
-            cls.scenarios.append(('local', {'url': cls.local}))
+            cls.scenarios.append(('local', {'torrent_url': cls.local}))
         if cls._do_remote and cls._is_remote_available:
-            cls.scenarios.append(('remote', {'url': cls.remote}))
+            cls.scenarios.append(('remote', {'torrent_url': cls.remote}))
 
     @classmethod
     def tearDownClass(cls):
