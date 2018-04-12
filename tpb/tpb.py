@@ -118,7 +118,8 @@ class List(object):
         user_status = "MEMBER"
         user_link = None
         if links[-1].get('href').startswith("/user/"):
-            user_status = links[-2].find('.//img').get('title')
+            status = links[-2].find('.//img').get('title')
+            user_status = status if status else user_status
             user_link = links[-1].get('href')
         meta_col = cols[1].find('.//font').text_content()  # don't need user
         match = self._meta.match(meta_col)
