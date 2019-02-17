@@ -22,9 +22,11 @@ import time
 
 from .utils import URL
 
-from requests import get
+import requests
 
-user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.167 Safari/537.36'
+user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+# session = requests.session()
+# proxies = {'http': 'socks5h://127.0.0.1:9051', 'https': 'socks5h://127.0.0.1:9051'}
 
 if sys.version_info >= (3, 0):
     unicode = str
@@ -61,7 +63,8 @@ class List(object):
         on page.
         """
         # request = urlopen(Request(str(self.torrent_url), data=None, headers={'User-Agent': user_agent}))
-        request = get(str(self.url), headers={'User-Agent': user_agent})
+        request = requests.get(str(self.url), headers={'User-Agent': user_agent})
+        print(f"Status for {self.url} is {request.status_code}", file=sys.stderr)
         # request = get(str(self.torrent_url))
         root = html.fromstring(request.text)
         items = [self._build_torrent(row) for row in
@@ -352,7 +355,7 @@ class Torrent(object):
     @property
     def info(self):
         if self._info is None:
-            request = get(str(self.torrent_url), headers={'User-Agent': user_agent})
+            request = requests.get(str(self.torrent_url), headers={'User-Agent': user_agent})
             # request = get(str(self.torrent_url))
             root = html.fromstring(request.text)
             info = root.cssselect('#details > .nfo > pre')[0].text_content()
@@ -364,7 +367,7 @@ class Torrent(object):
         if not self._files:
             path = '/ajax_details_filelist.php?id={id}'.format(id=self.id)
             url = self.torrent_url.path(path)
-            request = get(str(url), headers={'User-Agent': user_agent})
+            request = requests.get(str(url), headers={'User-Agent': user_agent})
             # request = get(str(torrent_url))
             root = html.fromstring(request.text)
             rows = root.findall('.//tr')
